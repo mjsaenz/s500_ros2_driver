@@ -1,8 +1,14 @@
 #pragma once
 
-#include <ping-message-common.h>
-#include <ping-message.h>
-#include <ping-parser.h>
+#ifndef S500_ROS2_DRIVER_DEVICE_PING_DEVICE_HPP
+#define S500_ROS2_DRIVER_DEVICE_PING_DEVICE_HPP
+
+#include "s500_ros2_driver/message/ping-message-common.hpp"
+#include "s500_ros2_driver/message/ping-message.hpp"
+#include "s500_ros2_driver/message/ping-parser.hpp"
+
+namespace s500_ros2_driver {
+namespace device {
 
 class PingPort;
 
@@ -136,3 +142,8 @@ private:
 
     common_general_request _general_request;
 };
+
+} // namespace device
+} // namespace s500_ros2_driver
+
+#endif // S500_ROS2_DRIVER_DEVICE_PING_DEVICE_HPP

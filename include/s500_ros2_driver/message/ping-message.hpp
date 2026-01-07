@@ -1,10 +1,17 @@
 // C++ implementation of the Blue Robotics 'Ping' binary message protocol
 
 #pragma once
+
+#ifndef S500_ROS2_DRIVER_MESSAGE_PING_MESSAGE_HPP
+#define S500_ROS2_DRIVER_MESSAGE_PING_MESSAGE_HPP
+
 #include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+namespace s500_ros2_driver {
+namespace message {
 
 class ping_message
 {
@@ -119,3 +126,8 @@ public:
         );
     }
 };
+
+} // namespace message
+} // namespace s500_ros2_driver
+
+#endif // S500_ROS2_DRIVER_MESSAGE_PING_MESSAGE_HPP

@@ -1,7 +1,13 @@
 #pragma once
 
+#ifndef S500_ROS2_DRIVER_MESSAGE_PING_PARSER_HPP
+#define S500_ROS2_DRIVER_MESSAGE_PING_PARSER_HPP
+
 #include <inttypes.h>
-#include "ping-message.h"
+#include "s500_ros2_driver/message/ping-message.hpp"
+
+namespace s500_ros2_driver {
+namespace message {
 
 /**
  * @brief Parser that digests data and notifies owner when something interesting happens
@@ -187,3 +193,8 @@ inline PingParser::State PingParser::parseByte(const uint8_t data)
     }
     return state_;
 }
+
+}
+} // namespace s500_ros2_driver
+
+#endif // S500_ROS2_DRIVER_MESSAGE_PING_PARSER_HPP

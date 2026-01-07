@@ -1,6 +1,9 @@
-#include "ping-device-s500.h"
-#include <ping-message-common.h>
-#include <ping-message-s500.h>
+#include "s500_ros2_driver/device/ping-device-s500.h"
+#include "s500_ros2_driver/message/ping-message-common.h"
+#include "s500_ros2_driver/message/ping-message-s500.h"
+
+namespace s500_ros2_driver {
+namespace device {
 
 S500::~S500()
 {
@@ -170,3 +173,6 @@ bool S500::set_speed_of_sound(uint32_t _sos_mm_per_sec, bool verify)
     }
     return true;
 }
+
+} // namespace device
+} // namespace s500_ros2_driver

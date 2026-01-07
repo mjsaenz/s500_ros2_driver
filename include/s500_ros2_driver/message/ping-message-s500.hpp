@@ -7,7 +7,13 @@
 
 #pragma once
 
-#include "ping-message.h"
+#ifndef S500_ROS2_DRIVER_MESSAGE_PING_MESSAGE_S500_HPP
+#define S500_ROS2_DRIVER_MESSAGE_PING_MESSAGE_S500_HPP
+
+#include "s500_ros2_driver/message/ping-message.hpp"
+
+namespace s500_ros2_driver {
+namespace message {
 
 // TODO: should maybe be an enum
 namespace S500Id
@@ -610,3 +616,7 @@ public:
     }
 };
 
+} // namespace message
+} // namespace s500_ros2_driver
+
+#endif // S500_ROS2_DRIVER_MESSAGE_PING_MESSAGE_S500_HPP

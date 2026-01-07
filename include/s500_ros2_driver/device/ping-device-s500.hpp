@@ -10,7 +10,13 @@
 
 #pragma once
 
-#include "ping-device.h"
+#ifndef S500_ROS2_DRIVER_DEVICE_PING_DEVICE_S500_HPP
+#define S500_ROS2_DRIVER_DEVICE_PING_DEVICE_S500_HPP
+
+#include "s500_ros2_driver/device/ping-device.hpp"
+
+namespace s500_ros2_driver {
+namespace device {
 
 class S500 : public PingDevice
 {
@@ -192,3 +198,8 @@ private:
      */
     void _handleMessage(const ping_message* message) override;
 };
+
+} // namespace device
+} // namespace s500_ros2_driver
+
+#endif // S500_ROS2_DRIVER_DEVICE_PING_DEVICE_S500_HPP
