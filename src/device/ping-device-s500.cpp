@@ -14,17 +14,7 @@ S500::~S500()
 
 bool S500::initialize(int16_t msec_per_ping)
 {
-    if (!PingDevice::initialize()) {
-        return false;
-    }
-
-    // Configure ping parameters
-    // We choose profile6_t as the default report to enable pinging
-    if (!set_ping_params(0, 5000, -1, msec_per_ping, 0, S500Id::PROFILE6_T, 0, 0, 0)) {
-        return false;
-    }
-
-    return true;
+    return PingDevice::initialize();
 }
 
 void S500::_handleMessage(const ping_message* message)

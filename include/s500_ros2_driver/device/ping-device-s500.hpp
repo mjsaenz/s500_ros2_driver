@@ -35,12 +35,9 @@ public:
 
     /**
      *  @brief Establish communications with the device, and initialize the update interval
-     *
-     *  @param msec_per_ping: The interval (in milliseconds) between acoustic measurements. -1 for a single ping.
-     *
      *  @return true if the device was initialized successfully
      */
-    bool initialize(int16_t msec_per_ping = 50);
+    bool initialize();
 
 // This loop is the critical part. It must iterate over "control" for s500.json.
     /**
