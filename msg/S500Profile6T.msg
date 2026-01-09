@@ -18,8 +18,8 @@ float32 pulse_duration_sec 0
 float32 analog_gain 0
 float32 max_pwr_db 0 
 float32 min_pwr_db 0 
-float32 this_ping_depth_m 0
-float32 smooth_depth_m 0
+float32 this_ping_depth_m 0 # distance of most recent ping
+float32 smooth_depth_m 0 # average distance over last 20 pings
 # float32 fspare2
 uint8 ping_depth_measurement_confidence 0
 uint8 gain_index 0

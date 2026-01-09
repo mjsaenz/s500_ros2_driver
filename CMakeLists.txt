@@ -9,10 +9,12 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(rcl_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/S500Backscatter.msg"
+  "msg/S500Profile6T.msg"
+  "msg/S500Distance2.msg"
   DEPENDENCIES std_msgs
 )
 
@@ -23,12 +25,18 @@ target_include_directories(s500_node PUBLIC
 target_compile_features(s500_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(
   s500_node
-  "rclcpp"
-  "std_msgs"
+  rclcpp
+  std_msgs
+  rcl_interfaces
 )
 
 install(TARGETS s500_node
   DESTINATION lib/${PROJECT_NAME})
+  
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

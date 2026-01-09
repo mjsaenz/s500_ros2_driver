@@ -1,23 +1,31 @@
 #include <chrono>
 #include <functional>
 #include <string>
+#include <cstdint>
+#include <atomic>
+#include <thread>
+#include <memory>
 
 #include "rclcpp/rclcpp.hpp"
 #include "s500_ros2_driver/device/ping-device-s500.hpp"
 #include "s500_ros2_driver/message/ping-message-s500.hpp"
 #include "s500_ros2_driver/utils/link/desktop/abstract-link.hpp"
 
-#include "s500_ros2_driver/msg/S500Backscatter.hpp"
+#include "s500_ros2_driver/msg/s500_profile6_t.hpp"
+#include "s500_ros2_driver/msg/s500_distance2.hpp"
 #include "std_msgs/msgs/header.hpp"
+#include "rcl_interfaces/msg/parameter_descriptor.cpp"
+#include "rcl_interfaces/msg/integer_range.cpp"
+#include "rcl_interfaces/msg/parameter_type.cpp"
 
 using namespace std::chrono_literals;
 
-class S500Publisher : public rclcpp::Node
+class S500PublisherNode : public rclcpp::Node
 {
   public:
-    S500Publisher() : Node("s500_publisher"), count_(0)
+    S500PublisherNode() : Node("s500_publisher_node"), count_(0)
     {
-      // connection parameters
+      // connection parameters: we set these once on initialization and do not change
       auto connection_type_descriptor = rcl_interfaces::msg::ParameterDescriptor();
       connection_type_descriptor.description = "Which communication protocol to use to communcate with the sounder.";
       connection_type_descriptor.read_only = true;
@@ -32,8 +40,8 @@ class S500Publisher : public rclcpp::Node
       this->declare_parameter("udp_ip", "192.168.0.20", udp_ip_descriptor);
       
       rcl_interfaces::msg::IntegerRange udp_port_range;
-      udp_port_range.from_value = 49152;
-      udp_port_range.to_value = 65535:
+      udp_port_range.from_value = 49152; // start of non-reserved port range
+      udp_port_range.to_value = std::numeric_limits<uint16_t>::max();
       udp_port_range.step = 1;
       
       auto udp_port_descriptor = rcl_interfaces::msg::ParameterDescriptor();
@@ -49,6 +57,11 @@ class S500Publisher : public rclcpp::Node
       serial_port_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
       this->declare_parameter("serial_port", "/dev/ttyUSB0", serial_port_descriptor);
       
+      rcl_interfaces::msg::IntegerRange baud_rate_range;
+      udp_port_range.from_value = std::numeric_limits<uint32_t>::min();
+      udp_port_range.to_value = std::numeric_limits<uint32_t>::max();
+      udp_port_range.step = 1;
+      
       auto baud_rate_descriptor = rcl_interfaces::msg::ParameterDescriptor();
       baud_rate_descriptor.description = "Serial baud rate of the S500 sounder, to be used when connection_type is serial.";
       baud_rate_descriptor.read_only = true;
@@ -61,10 +74,11 @@ class S500Publisher : public rclcpp::Node
       serial_port_ = this->get_parameter("serial_port").as_string();
       baud_rate_ = static_cast<uint32_t>(this->get_parameter("baud_rate").as_int());
       
-      // ping parameters
+      
+      // ping parameters: we set these once on initialization and do not change
       rcl_interfaces::msg::IntegerRange length_mm_range;
-      length_mm_range.from_value = 0;
-      length_mm_range.to_value = 142000: // 142m rough maximum range listed in Cerulean Sonar FAQ
+      length_mm_range.from_value = std::numeric_limits<uint32_t>::min();
+      length_mm_range.to_value = 142000; // 142m rough maximum range listed in Cerulean Sonar FAQ
       length_mm_range.step = 1;
       
       auto start_mm_descriptor = rcl_interfaces::msg::ParameterDescriptor();
@@ -95,7 +109,7 @@ class S500Publisher : public rclcpp::Node
       
       rcl_interfaces::msg::IntegerRange ping_interval_ms_range;
       gain_index_range.from_value = -1;
-      gain_index_range.to_value = 32767:
+      gain_index_range.to_value = std::numeric_limits<int16_t>::max();
       gain_index_range.step = 1;
       
       auto ping_interval_ms_descriptor = rcl_interfaces::msg::ParameterDescriptor();
@@ -103,12 +117,16 @@ class S500Publisher : public rclcpp::Node
       ping_interval_ms_descriptor.read_only = true;
       ping_interval_ms_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
       ping_interval_ms_descriptor.integer_range.push_back(ping_interval_ms_range);
-      connection_type_descriptor.additional_constraints = "Ping Parameter field is defined as a 16-bit integer. Unknown what the true minimum or maximum ping intervals are.";
+      ping_interval_ms_descriptor.additional_constraints = "Ping Parameter field is defined as a 16-bit integer. Unknown what the true minimum or maximum ping intervals are.";
       this->declare_parameter("ping_interval_ms", 100, ping_interval_ms_descriptor);
       
       // pulse_len_usec: 0 for auto mode. Currently ignored and auto duration is always used.
       
-      // report_id: ID of the packet type you would like in response. Options are distance2 (1224), profile6 (1308), or zero. Zero disables pinging. Node currently only supports profile6, as message is defined to report backscatter.
+      auto packet_type_descriptor = rcl_interfaces::msg::ParameterDescriptor();
+      packet_type_descriptor.description = "Name of the packet type you would like in response. 'distance2' returns simple and averaged range estimate. 'profile6_t' returns the entire backscatter, alongside a more verbose output."
+      packet_type_descriptor.read_only = true;
+      packet_type_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+      this->declare_parameter("packet_type", "profile6_t", packet_type_descriptor);
       
       // reserved: Set to 0.
       
@@ -119,30 +137,73 @@ class S500Publisher : public rclcpp::Node
       this->declare_parameter("chirp_enable", true, chirp_enable_description);
       
       // decimation: Set to 0 for auto range resolution in chirp mode.
+      rcl_interfaces::msg::IntegerRange decimation_range;
+      decimation_range.from_value = 0;
+      decimation_range.to_value = std::numeric_limits<int8_t>::max();
+      decimation_range.step = 1;
       
+      auto decimation_descriptor = rcl_interfaces::msg::ParameterDescriptor();
+      decimation_descriptor.description = "Integer factor to downsample sonar signal by. Set to 0 for auto range resolution in chirp mode.";
+      decimation_descriptor.read_only = true;
+      decimation_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+      decimation_descriptor.integer_range.push_back(decimation_range);
+      this->declare_parameter("decimation", 0, ping_interval_ms_descriptor);
       
       start_mm_ = static_cast<uint32_t>(this->get_parameter("start_mm").as_int());
       length_mm_ = static_cast<uint32_t>(this->get_parameter("length_mm").as_int());
       gain_index_ = static_cast<int16_t>(this->get_parameter("gain_index").as_int());
       msec_per_ping_ = static_cast<int16_t>(this->get_parameter("ping_interval_ms").as_int());
       // pulse_len_usec: 0 for auto mode. Currently ignored and auto duration is always used.
-      // report_id_ = S500Id::PROFILE6_T;
+      packet_type_ = this->get_parameter("packet_type").as_string(); // set report_id_ in init() to isolate error-handling to single function
       // reserved_ = 0; 
-      uint8_t chirp_ = (this->get_parameter("chirp_enable").as_bool() ? 1 : 0;;
-      // decimation_ = 0;
+      chirp_ = static_cast<uint8_t>((this->get_parameter("chirp_enable").as_bool()) ? 1 : 0);
+      decimation_ = static_cast<uint8_t>(this->get_parameter("decimation").as_int());
+      
+      // speed of sound: on_parameter_event callback function allows dynamically changing the speed of sound through ROS parameter
+      rcl_interfaces::msg::IntegerRange sos_mm_per_sec_range;
+      length_mm_range.from_value = std::numeric_limits<uint32_t>::min();
+      length_mm_range.to_value = std::numeric_limits<uint32_t>::max(); 
+      length_mm_range.step = 1;
+      
+      auto sos_mm_per_sec_description = rcl_interfaces::msg::ParameterDescriptor();
+      sos_mm_per_sec_description.description = "Speed of sound in the sounding medium, in mm/s. Used in distance calculations.";
+      sos_mm_per_sec_description.read_only = false;
+      sos_mm_per_sec_description.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+      sos_mm_per_sec_description.integer_range.push_back(sos_mm_per_sec_range);
+      this->declare_parameter("sos_mm_per_sec", 1500000, sos_mm_per_sec_description);
+      
+      sos_mm_per_sec_ = static_cast<uint32_t>(this->get_parameter("sos_mm_per_sec").as_int());
+      
+      // metadata parameter: we set this once on initialization and do not change
+      auto frame_id_descriptor = rcl_interfaces::msg::ParameterDescriptor();
+      frame_id_descriptor.description = "Frame_id to be published in backscatter message header. Can be used to distinguish between multiple devices in the same system.";
+      frame_id_descriptor.read_only = true;
+      frame_id_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
+      this->declare_parameter("frame_id", "Sounder_S500", frame_id_descriptor);
+      
+      frame_id_ = this->get_parameter("frame_id").as_string();
       
       if (!init_device()){
-        RCLCPP_ERROR(this->get_logger(), "Failed to init device. Node will be shut down.");
+        RCLCPP_FATAL(this->get_logger(), "Failed to initialize device. Node will be shut down.");
         rclcpp::shutdown();
         return;
       }
       
-      publisher_ = this->create_publisher<s500_ros2_driver:msg:S500Backscatter>("S500_backscatter", 10);
-      timer_ = this->create_wall_timer(100ms, std::bind(&S500Publisher::timer_callback, this));
+      if (report_id_ == s500_ros2_driver::message::S500Id::DISTANCE2){
+        distance2_publisher_ = this->create_publisher<s500_ros2_driver::msg::S500Distance2>("s500/distance2", 10);
+      } else { // report_id_ == s500_ros2_driver::message::S500Id::PROFILE6_T
+        profile6_t_publisher_ = this->create_publisher<s500_ros2_driver::msg::S500Profile6T>("s500/profile6_t", 10);
+      }
       
-      rclcpp::on_shutdown(std::bind(&S500Publisher::shutdown_callback, this));
+      RCLCPP_INFO(this->get_logger(), "Starting a dedicated sonar polling thread.");
+      sonar_polling_thread_ = std::thread(&S500PublisherNode::sonar_poll_loop, this);
+      
+      rclcpp::on_shutdown(std::bind(&S500PublisherNode::on_shutdown_callback, this));
     }
   private:
+    /**
+     *  @brief Function to initialize connection to sonar device. Returns true if able to parse the connection string, open that connection, intitialize comms with the sounder, and set Speed of Sound and other ping params. Otherwise returns false with a ROS2 error message explaining where it failed.
+     */
     bool init_device()
     {
       // device connection and initialization
@@ -155,37 +216,118 @@ class S500Publisher : public rclcpp::Node
         return false;
       }
       
-      auto port = AbstractLink::openUrl(connection_string_);
+      auto port = s500_ros2_driver::utils::link::AbstractLink::openUrl(connection_string_);
       if (!port) {
         RCLCPP_ERROR(this->get_logger(), "Unable to open connection on %s. Check device connection.", connection_string_.c_str());
         return false;
       }
       
-      device_ = S500(*port.get());
+      device_ = std::make_unique<s500_ros2_driver::device::S500>(*port.get());
       if (!device_.initialize()){
         RCLCPP_ERROR(this->get_logger(), "Unable to establish communication link to S500 on %s. Check device connection.", connection_string_.c_str());
         return false;
       }
       
-      
-      if (!device_.set_ping_params(start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, report_id_, reserved_, chirp_, decimation_)){
-        RCLCPP_ERROR(this->get_logger(), "Unable to set s500 ping parameters to specified values.");
+      if (!device_.set_speed_of_sound(sos_mm_per_sec_, true)){
+        RCLCPP_ERROR(this->get_logger(), "Unable to set s500 speed of sound to specified value: %d mm/s.", sos_mm_per_sec_);
         return false;
       }
       
+      if (packet_type_ == "distance2"){
+        report_id_ = s500_ros2_driver::message::S500Id::DISTANCE2;
+      } else if (packet_type_ == "profile6_t"){
+        report_id_ = s500_ros2_driver::message::S500Id::PROFILE6_T;
+      } else {
+        RCLCPP_ERROR(this->get_logger(), "Packet type %s not recognized.", packet_type_.c_str());
+        return false;
+      }
+      
+      if (!device_.set_ping_params(start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, report_id_, reserved_, chirp_, decimation_, true)){
+        RCLCPP_ERROR(this->get_logger(), "Unable to set s500 ping parameters to specified values. Start: %d mm, Length: %d mm, Gain Index (-1 for auto gain): %d, Ping Interval: %d msec, Pulse Length (0 for auto mode): %d usec, report_id (1223 for distance2, 1308 for profile6_t, 0 for disable: %d, Chirp Mode: %d, Decimation (0 for auto range resolution in Chirp Mode): %d", start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, report_id_, chirp_, decimation_);
+        return false;
+      }
+      
+      RCLCPP_INFO(this->get_logger(), "Device initialized successfully on connection %s. Start: %d mm, Length: %d mm, Gain Index (-1 for auto gain): %d, Ping Interval: %d msec, Pulse Length (0 for auto mode): %d usec, report_id (1223 for distance2, 1308 for profile6_t, 0 for disable: %d, Chirp Mode: %d, Decimation (0 for auto range resolution in Chirp Mode): %d, Speed of Sound: %d mm/s", connection_string_.c_str(), start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, report_id_, chirp_, decimation_, sos_mm_per_sec_);
+      RCLCPP_INFO(this->get_logger(), "Speed of Sound can be modified dynamically using the 'sos_mm_per_sec' parameter. All other Ping Parameters are set statically.");
       return true;
     }
   
-    void timer_callback()
+    /**
+     *  @brief Process loop to wait for and publish sonar messages of type report_id_. S500 waitMessage() function is blocking while reading data from S500, so process will run in a separate thread to prevent blocking main rclcpp process.
+     */
+    void sonar_poll_loop()
     {
-      // call read() to attempt to parse profile6_t messages
-      // timer and S500 interval should be the same
-      // dont use wait_message() as it is blocking while waiting for read
+      while (sonar_polling_thread_execute_ && rclcpp::ok()){
+        
+        auto msg = device_->waitMessage(report_id_, msec_per_ping_); // blocking
+        
+        if (!sonar_polling_thread_execute_){
+          break; // stop listening when shutdown is received
+        }
+        
+        if (msg) {
+          
+          if (report_id_ == s500_ros2_driver::message::S500Id::DISTANCE2){
+            auto& data = device_->distance2_data;
+            auto distance2_msg = std::make_unique<s500_ros2_driver::msg::S500Distance2>();
+            
+            distance2_msg->header.stamp = this->get_clock()->now();
+            distance2_msg->header.frame_id = frame_id_;
+            
+            distance2_msg->ping_distance_mm = data.ping_distance_mm;
+            distance2_msg->averaged_distance_mm = data.averaged_distance_mm;
+            distance2_msg->ping_confidence = data.ping_confidence;
+            distance2_msg->average_distance_confidence = data.average_distance_confidence;
+            distance2_msg->timestamp_msec = data.timestamp;
+            
+            distance2_publisher_->publish(std::move(distance2_msg));
+          } else { // report_id_ == s500_ros2_driver::message::S500Id::PROFILE6_T
+            auto& data = device_->profile6_t_data;
+            auto profile6_t_msg = std::make_unique<s500_ros2_driver::msg::S500Profile6T>();
+            
+            profile6_t_msg->header.stamp = this->get_clock()->now();
+            profile6_t_msg->header.frame_id = frame_id_;
+            
+            profile6_t_msg->start_mm = data.start_mm;
+            profile6_t_msg->length_mm = data.length_mm;
+            profile6_t_msg->start_ping_hz = data.start_ping_hz;
+            profile6_t_msg->end_ping_hz = data.end_ping_hz;
+            profile6_t_msg->adc_sample_hz = data.adc_sample_hz;
+            profile6_t_msg->timestamp_msec = data.timestamp;
+            profile6_t_msg->pulse_duration_sec = data.pulse_duration_sec;
+            profile6_t_msg->analog_gain = data.analog_gain;
+            profile6_t_msg->max_pwr_db = data.max_pwr_db;
+            profile6_t_msg->min_pwr_db = data.min_pwr_db;
+            profile6_t_msg->this_ping_depth_m = data.this_ping_depth_m;
+            profile6_t_msg->smooth_depth_m = data.smooth_depth_m;
+            profile6_t_msg->ping_depth_measurement_confidence = data.ping_depth_measurement_confidence;
+            profile6_t_msg->gain_index = data.gain_index;
+            profile6_t_msg->decimation = data.decimation;
+            profile6_t_msg->smoothed_depth_measurement_confidence = data.smoothed_depth_measurement_confidence;
+            profile6_t_msg->num_results = data.num_results;
+            profile6_t_msg->pwr_results.assign(data.pwr_results, data.pwr_results + data.pwr_results_length);
+            
+            profile6_t_publisher_->publish(std::move(profile6_t_msg));
+          }
+        } else {
+          RCLCPP_WARN(this->get_logger(), "Did not receive a %s message within the %d ms timeout.", packet_type_.c_str(), msec_per_ping_);
+        }
+      }
+      RCLCPP_INFO(this->get_logger(), "Sonar polling thread has ended.");
     }
     
-    void shutdown_callback()
+    /**
+     *  @brief ROS2 Shutdown Callback function to end sonar_poll_loop() hardware thread and disabling pings on the S500.
+     */
+    void on_shutdown_callback()
     {
-      RCLCPP_INFO(this->get_logger(). "Disabling ping on S500 on connection %s.", connection_string_.c_str());
+      RCLCPP_INFO(this->get_logger(), "Shutting down sonar polling thread.");
+      sonar_polling_thread_execute_ = false;
+      if (sonar_polling_thread_.joinable()){
+        sonar_polling_thread_.join();
+      }
+      
+      RCLCPP_INFO(this->get_logger(), "Disabling ping on S500 on connection %s.", connection_string_.c_str());
       // setting report_id to 0 disables pinging.
       device_.set_ping_params(start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, 0, reserved_, chirp_, decimation_);
     }
@@ -204,21 +346,31 @@ class S500Publisher : public rclcpp::Node
     int16_t gain_index_;
     int16_t msec_per_ping_;
     uint16_t pulse_len_usec_ = 0; // pulse_len_usec: 0 for auto mode. Currently ignored and auto duration is always used.
-    uint16_t report_id_ = S500Id::PROFILE6_T;
+    std::string packet_type_;
+    uint16_t report_id_;
     uint16_t reserved_ = 0; 
     uint8_t chirp_;
     uint8_t decimation_ = 0; // decimation: Set to 0 for auto range resolution in chirp mode.
     
+    // dynamic parameter
+    uint32_t sos_mm_per_sec_;
+    
+    // metadata parameter
+    std::string frame_id_;
+    
     S500 device_;
     
-    rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Publisher<s500_ros2_driver::msg::S500Backscatter>::SharedPtr publisher_;
+    rclcpp::Publisher<s500_ros2_driver::msg::S500Distance2>::SharedPtr distance2_publisher_;
+    rclcpp::Publisher<s500_ros2_driver::msg::S500Profile6T>::SharedPtr profile6_t_publisher_;
+    
+    std::thread sonar_polling_thread_;
+    std::atomic<bool> sonar_polling_thread_execute_{true};
 };
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<S500Publisher>();
+  auto node = std::make_shared<S500PublisherNode>();
   rclpp::spin(node);
   rclpp::shutdown(); 
   return 0;
