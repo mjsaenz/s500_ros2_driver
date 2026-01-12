@@ -58,14 +58,15 @@ class S500PublisherNode : public rclcpp::Node
       this->declare_parameter("serial_port", "/dev/ttyUSB0", serial_port_descriptor);
       
       rcl_interfaces::msg::IntegerRange baud_rate_range;
-      udp_port_range.from_value = std::numeric_limits<uint32_t>::min();
-      udp_port_range.to_value = std::numeric_limits<uint32_t>::max();
-      udp_port_range.step = 1;
+      baud_rate_range.from_value = std::numeric_limits<uint32_t>::min();
+      baud_rate_range.to_value = std::numeric_limits<uint32_t>::max();
+      baud_rate_range.step = 1;
       
       auto baud_rate_descriptor = rcl_interfaces::msg::ParameterDescriptor();
       baud_rate_descriptor.description = "Serial baud rate of the S500 sounder, to be used when connection_type is serial.";
       baud_rate_descriptor.read_only = true;
       baud_rate_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+      baud_rate_descriptor.integer_range.push_back(baud_rate_range);
       this->declare_parameter("baud_rate", 115200, baud_rate_descriptor);
       
       connection_type_ = this->get_parameter("connection_type").as_string();
@@ -117,7 +118,7 @@ class S500PublisherNode : public rclcpp::Node
       ping_interval_ms_descriptor.read_only = true;
       ping_interval_ms_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
       ping_interval_ms_descriptor.integer_range.push_back(ping_interval_ms_range);
-      ping_interval_ms_descriptor.additional_constraints = "Ping Parameter field is defined as a 16-bit integer. Unknown what the true minimum or maximum ping intervals are.";
+      ping_interval_ms_descriptor.additional_constraints = "Ping Parameter field is defined as a signed 16-bit integer. Unknown what the true minimum or maximum ping intervals are.";
       this->declare_parameter("ping_interval_ms", 100, ping_interval_ms_descriptor);
       
       // pulse_len_usec: 0 for auto mode. Currently ignored and auto duration is always used.
@@ -139,7 +140,7 @@ class S500PublisherNode : public rclcpp::Node
       // decimation: Set to 0 for auto range resolution in chirp mode.
       rcl_interfaces::msg::IntegerRange decimation_range;
       decimation_range.from_value = 0;
-      decimation_range.to_value = std::numeric_limits<int8_t>::max();
+      decimation_range.to_value = std::numeric_limits<uint8_t>::max();
       decimation_range.step = 1;
       
       auto decimation_descriptor = rcl_interfaces::msg::ParameterDescriptor();
@@ -199,6 +200,21 @@ class S500PublisherNode : public rclcpp::Node
       sonar_polling_thread_ = std::thread(&S500PublisherNode::sonar_poll_loop, this);
       
       rclcpp::on_shutdown(std::bind(&S500PublisherNode::on_shutdown_callback, this));
+      
+      param_subscriber_ = std::make_shared<rclcpp:ParameterEventHandler>(this);
+      
+      auto sos_cb = [this](const rclcpp::Parameter & p) {
+        uint32_t new_sos_mm_per_sec = static_cast<uint32_t>(p.as_int());
+        
+        if (!device_.set_speed_of_sound(new_sos_mm_per_sec, true)){
+          RCLCPP_WARN(this->get_logger(), "Unable to set s500 speed of sound to specified value: %d mm/s. Continuing to log with original speed of sound: %d mm/s", new_sos_mm_per_sec, sos_mm_per_sec_);
+        } else {
+          sos_mm_per_sec_ = new_sos_mm_per_sec;
+          RCLCPP_INFO(this->get_logger(), "Updated s500 speed of sound to %d mm/s.", sos_mm_per_sec_);
+        }
+      };
+      
+      sos_handler_ = param_subscriber_->add_parameter_callback("sos_mm_per_sec", sos_cb);
     }
   private:
     /**
@@ -365,6 +381,9 @@ class S500PublisherNode : public rclcpp::Node
     
     std::thread sonar_polling_thread_;
     std::atomic<bool> sonar_polling_thread_execute_{true};
+    
+    std::shared_ptr<rclcpp::ParameterEventHandler> param_subscriber_;
+    std::shared_ptr<rclcpp::ParameterCallbackHandle> sos_handler_;
 };
 
 int main(int argc, char ** argv)
