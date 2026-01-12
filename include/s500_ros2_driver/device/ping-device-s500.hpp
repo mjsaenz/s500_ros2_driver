@@ -26,7 +26,7 @@ public:
      *
      *  @param ser: The device I/O
      */
-    S500(PingPort& port) : PingDevice(port) {}
+    S500(s500_ros2_driver::utils::link::PingPort& port) : PingDevice(port) {}
 
     /**
      * @brief Destructor
@@ -193,7 +193,7 @@ private:
      *
      *  @param message: A pointer to the message received from the device
      */
-    void _handleMessage(const ping_message* message) override;
+    void _handleMessage(const s500_ros2_driver::message::ping_message* message) override;
 };
 
 } // namespace device

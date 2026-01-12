@@ -14,16 +14,16 @@
 #include "s500_ros2_driver/msg/s500_profile6_t.hpp"
 #include "s500_ros2_driver/msg/s500_distance2.hpp"
 #include "std_msgs/msg/header.hpp"
-#include "rcl_interfaces/msg/parameter_descriptor.cpp"
-#include "rcl_interfaces/msg/integer_range.cpp"
-#include "rcl_interfaces/msg/parameter_type.cpp"
+#include "rcl_interfaces/msg/parameter_descriptor.hpp"
+#include "rcl_interfaces/msg/integer_range.hpp"
+#include "rcl_interfaces/msg/parameter_type.hpp"
 
 using namespace std::chrono_literals;
 
 class S500PublisherNode : public rclcpp::Node
 {
   public:
-    S500PublisherNode() : Node("s500_publisher_node"), count_(0)
+    S500PublisherNode() : Node("s500_publisher_node")
     {
       // connection parameters: we set these once on initialization and do not change
       auto connection_type_descriptor = rcl_interfaces::msg::ParameterDescriptor();
@@ -98,7 +98,7 @@ class S500PublisherNode : public rclcpp::Node
       
       rcl_interfaces::msg::IntegerRange gain_index_range;
       gain_index_range.from_value = -1;
-      gain_index_range.to_value = 13:
+      gain_index_range.to_value = 13;
       gain_index_range.step = 1;
       
       auto gain_index_descriptor = rcl_interfaces::msg::ParameterDescriptor();
@@ -124,7 +124,7 @@ class S500PublisherNode : public rclcpp::Node
       // pulse_len_usec: 0 for auto mode. Currently ignored and auto duration is always used.
       
       auto packet_type_descriptor = rcl_interfaces::msg::ParameterDescriptor();
-      packet_type_descriptor.description = "Name of the packet type you would like in response. 'distance2' returns simple and averaged range estimate. 'profile6_t' returns the entire backscatter, alongside a more verbose output."
+      packet_type_descriptor.description = "Name of the packet type you would like in response. 'distance2' returns simple and averaged range estimate. 'profile6_t' returns the entire backscatter, alongside a more verbose output.";
       packet_type_descriptor.read_only = true;
       packet_type_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
       this->declare_parameter("packet_type", "profile6_t", packet_type_descriptor);
@@ -134,7 +134,7 @@ class S500PublisherNode : public rclcpp::Node
       auto chirp_enable_description = rcl_interfaces::msg::ParameterDescriptor();
       chirp_enable_description.description = "Boolean to enable CHIRP. If false, the s500 will use a monotone ping instead.";
       gain_index_descriptor.read_only = true;
-      gain_index_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOLEAN;
+      gain_index_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
       this->declare_parameter("chirp_enable", true, chirp_enable_description);
       
       // decimation: Set to 0 for auto range resolution in chirp mode.
@@ -201,12 +201,12 @@ class S500PublisherNode : public rclcpp::Node
       
       rclcpp::on_shutdown(std::bind(&S500PublisherNode::on_shutdown_callback, this));
       
-      param_subscriber_ = std::make_shared<rclcpp:ParameterEventHandler>(this);
+      param_subscriber_ = std::make_shared<rclcpp::ParameterEventHandler>(this);
       
       auto sos_cb = [this](const rclcpp::Parameter & p) {
         uint32_t new_sos_mm_per_sec = static_cast<uint32_t>(p.as_int());
         
-        if (!device_.set_speed_of_sound(new_sos_mm_per_sec, true)){
+        if (!device_->set_speed_of_sound(new_sos_mm_per_sec, true)){
           RCLCPP_WARN(this->get_logger(), "Unable to set s500 speed of sound to specified value: %d mm/s. Continuing to log with original speed of sound: %d mm/s", new_sos_mm_per_sec, sos_mm_per_sec_);
         } else {
           sos_mm_per_sec_ = new_sos_mm_per_sec;
@@ -225,26 +225,26 @@ class S500PublisherNode : public rclcpp::Node
       // device connection and initialization
       if (connection_type_ == "udp"){
         connection_string_ = "udp:" + udp_ip_ + ":" + std::to_string(udp_port_);
-      } else if (connection_type == "serial") {
+      } else if (connection_type_ == "serial") {
         connection_string_ = "serial:" + serial_port_ + ":" + std::to_string(baud_rate_);
       } else {
-        RCLCPP_ERROR(this->get_logger(), "Connection type %s not recognized. Valid connection types are 'udp' and 'serial'.", connection_type.c_str());
+        RCLCPP_ERROR(this->get_logger(), "Connection type %s not recognized. Valid connection types are 'udp' and 'serial'.", connection_type_.c_str());
         return false;
       }
       
-      auto port = s500_ros2_driver::utils::link::AbstractLink::openUrl(connection_string_);
+      auto port = s500_ros2_driver::utils::link::desktop::AbstractLink::openUrl(connection_string_);
       if (!port) {
         RCLCPP_ERROR(this->get_logger(), "Unable to open connection on %s. Check device connection.", connection_string_.c_str());
         return false;
       }
       
       device_ = std::make_unique<s500_ros2_driver::device::S500>(*port.get());
-      if (!device_.initialize()){
+      if (!device_->initialize()){
         RCLCPP_ERROR(this->get_logger(), "Unable to establish communication link to S500 on %s. Check device connection.", connection_string_.c_str());
         return false;
       }
       
-      if (!device_.set_speed_of_sound(sos_mm_per_sec_, true)){
+      if (!device_->set_speed_of_sound(sos_mm_per_sec_, true)){
         RCLCPP_ERROR(this->get_logger(), "Unable to set s500 speed of sound to specified value: %d mm/s.", sos_mm_per_sec_);
         return false;
       }
@@ -258,7 +258,7 @@ class S500PublisherNode : public rclcpp::Node
         return false;
       }
       
-      if (!device_.set_ping_params(start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, report_id_, reserved_, chirp_, decimation_, true)){
+      if (!device_->set_ping_params(start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, report_id_, reserved_, chirp_, decimation_, true)){
         RCLCPP_ERROR(this->get_logger(), "Unable to set s500 ping parameters to specified values. Start: %d mm, Length: %d mm, Gain Index (-1 for auto gain): %d, Ping Interval: %d msec, Pulse Length (0 for auto mode): %d usec, report_id (1223 for distance2, 1308 for profile6_t, 0 for disable: %d, Chirp Mode: %d, Decimation (0 for auto range resolution in Chirp Mode): %d", start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, report_id_, chirp_, decimation_);
         return false;
       }
@@ -309,7 +309,7 @@ class S500PublisherNode : public rclcpp::Node
             profile6_t_msg->start_ping_hz = data.start_ping_hz;
             profile6_t_msg->end_ping_hz = data.end_ping_hz;
             profile6_t_msg->adc_sample_hz = data.adc_sample_hz;
-            profile6_t_msg->timestamp_msec = data.timestamp;
+            profile6_t_msg->timestamp_msec = data.timestamp_msec;
             profile6_t_msg->pulse_duration_sec = data.pulse_duration_sec;
             profile6_t_msg->analog_gain = data.analog_gain;
             profile6_t_msg->max_pwr_db = data.max_pwr_db;
@@ -319,7 +319,7 @@ class S500PublisherNode : public rclcpp::Node
             profile6_t_msg->ping_depth_measurement_confidence = data.ping_depth_measurement_confidence;
             profile6_t_msg->gain_index = data.gain_index;
             profile6_t_msg->decimation = data.decimation;
-            profile6_t_msg->smoothed_depth_measurement_confidence = data.smoothed_depth_measurement_confidence;
+            profile6_t_msg->smooth_depth_measurement_confidence = data.smoothed_depth_measurement_confidence;
             profile6_t_msg->num_results = data.num_results;
             profile6_t_msg->pwr_results.assign(data.pwr_results, data.pwr_results + data.pwr_results_length);
             
@@ -345,7 +345,7 @@ class S500PublisherNode : public rclcpp::Node
       
       RCLCPP_INFO(this->get_logger(), "Disabling ping on S500 on connection %s.", connection_string_.c_str());
       // setting report_id to 0 disables pinging.
-      device_.set_ping_params(start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, 0, reserved_, chirp_, decimation_);
+      device_->set_ping_params(start_mm_, length_mm_, gain_index_, msec_per_ping_, pulse_len_usec_, 0, reserved_, chirp_, decimation_, false);
     }
     
     // connection parameters
@@ -374,7 +374,7 @@ class S500PublisherNode : public rclcpp::Node
     // metadata parameter
     std::string frame_id_;
     
-    S500 device_;
+    std::unique_ptr<s500_ros2_driver::device::S500> device_;
     
     rclcpp::Publisher<s500_ros2_driver::msg::S500Distance2>::SharedPtr distance2_publisher_;
     rclcpp::Publisher<s500_ros2_driver::msg::S500Profile6T>::SharedPtr profile6_t_publisher_;
@@ -390,7 +390,7 @@ int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<S500PublisherNode>();
-  rclpp::spin(node);
-  rclpp::shutdown(); 
+  rclcpp::spin(node);
+  rclcpp::shutdown(); 
   return 0;
 }

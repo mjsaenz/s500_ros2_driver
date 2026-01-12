@@ -6,11 +6,10 @@
 #include "s500_ros2_driver/message/ping-message-common.hpp"
 #include "s500_ros2_driver/message/ping-message.hpp"
 #include "s500_ros2_driver/message/ping-parser.hpp"
+#include "s500_ros2_driver/utils/link/ping-port.hpp"
 
 namespace s500_ros2_driver {
 namespace device {
-
-class PingPort;
 
 /**
  * A PingDevice class can be used to communicate with a
@@ -29,7 +28,7 @@ public:
      *
      *  @param port: The device io handle
      */
-    PingDevice(PingPort& port)
+    PingDevice(s500_ros2_driver::utils::link::PingPort& port)
         : _parser(4096)
         , _port(port)
     {
@@ -53,14 +52,14 @@ public:
      *  @return: null if the RX buffer is empty and no PingMessage has been
      * decoded
      */
-    ping_message* read();
+    s500_ros2_driver::message::ping_message* read();
 
     /**
      * @brief Return the last available message by copy
      *
      * @return ping_message
      */
-    ping_message message();
+    s500_ros2_driver::message::ping_message message();
 
     /**
      *  @brief Request a ping_message from the device
@@ -78,7 +77,7 @@ public:
      *  ping_msg_ping1D_voltage_5 msg(*pd.request(Ping1dId::Voltage_5));
      *  @endcode
      */
-    ping_message* request(uint16_t id, int timeoutMs = 500);
+    s500_ros2_driver::message::ping_message* request(uint16_t id, int timeoutMs = 500);
 
     /**
      *  @brief Wait for receipt of a message with a particular message id from
@@ -91,7 +90,7 @@ public:
      *  @return The ping_message received with matching id, or a nack message if the device nacked the request
      *  @return null if the timeout expires and no matching ping_message or nack was received
      */
-    ping_message* waitMessage(uint16_t id, int timeoutMs = 500);
+    s500_ros2_driver::message::ping_message* waitMessage(uint16_t id, int timeoutMs = 500);
 
     /**
      *  @brief Write data to device
@@ -109,7 +108,7 @@ public:
      *
      *  @param message: a pointer to the ping_message
      */
-    void writeMessage(ping_message& message);
+    void writeMessage(s500_ros2_driver::message::ping_message& message);
 
     uint8_t device_id;
 
@@ -134,13 +133,13 @@ protected:
      *
      *  @param message: A pointer to the message received from the device
      */
-    virtual void _handleMessage(const ping_message* message);
+    virtual void _handleMessage(const s500_ros2_driver::message::ping_message* message);
 
 private:
-    PingParser _parser;
-    PingPort& _port;
+    s500_ros2_driver::message::PingParser _parser;
+    s500_ros2_driver::utils::link::PingPort& _port;
 
-    common_general_request _general_request;
+    s500_ros2_driver::message::common_general_request _general_request;
 };
 
 } // namespace device
