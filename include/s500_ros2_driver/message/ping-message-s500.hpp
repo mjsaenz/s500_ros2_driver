@@ -478,11 +478,21 @@ uint16_t pwr_results_length
     void set_smoothed_depth_measurement_confidence(const uint8_t smoothed_depth_measurement_confidence) { reinterpret_cast<uint8_t&>(msgData[headerLength + 63]) = smoothed_depth_measurement_confidence; }
     uint16_t num_results() const { return reinterpret_cast<uint16_t&>(msgData[headerLength + 64]); }
     void set_num_results(const uint16_t num_results) { reinterpret_cast<uint16_t&>(msgData[headerLength + 64]) = num_results; }
-    uint16_t pwr_results_length() const { return reinterpret_cast<uint16_t&>(msgData[headerLength + 66]); }
+    uint16_t pwr_results_length() const { return num_results(); }
     //TODO do this in constructor (const)
-    void set_pwr_results_length(const uint16_t pwr_results_length) { reinterpret_cast<uint16_t&>(msgData[headerLength + 66]) = pwr_results_length;}
-    uint16_t* pwr_results() const { return reinterpret_cast<uint16_t*>(msgData+headerLength+68); }
-    void set_pwr_results_at(const uint16_t i, const uint16_t data) { reinterpret_cast<uint16_t&>(msgData[headerLength + 68 + i]) = data; }
+    
+    uint16_t* pwr_results() const { 
+        if(payload_length()<=66) {
+          return nullptr;  
+         }
+         return reinterpret_cast<uint16_t*>(msgData+headerLength+66); 
+    }
+    void set_pwr_results_at(const uint16_t i, const uint16_t data) { 
+        if ((i * sizeof(uint16_t)) < (payload_length() - 66)) {
+             pwr_results()[i] = data;
+         }
+ 
+    }
 
     int getMessageAsString(char* string, size_t size) const {
         int written = ping_message::getMessageAsString(string, size);
