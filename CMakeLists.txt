@@ -18,23 +18,39 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   DEPENDENCIES std_msgs
 )
 
-add_executable(s500_node src/s500_node.cpp)
-target_include_directories(s500_node PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_compile_features(s500_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-ament_target_dependencies(
-  s500_node
+add_executable(s500_publisher_node src/s500_node.cpp)
+
+target_include_directories(s500_publisher_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SORUCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+target_compile_features(s500_publisher_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+
+ament_target_dependencies(s500_publisher_node
   rclcpp
   std_msgs
   rcl_interfaces
 )
 
-ament_export_dependencies(rosidl_default_runtime)
+target_link_libraries(s500_publisher_node
+  ${PROJECT_NAME}__rosidl_typesupport_cpp
+)
 
-install(TARGETS s500_node
-  DESTINATION lib/${PROJECT_NAME})
-  
+install(
+  DIRECTORY include/
+  DESTINATION include
+)
+
+install(
+  DIRECTORY rosidl_generator_cpp/${PROJECT_NAME}
+  DESTINATION include/${PROJECT_NAME}
+)
+
+install(TARGETS s500_publisher_node
+  DESTINATION lib/${PROJECT_NAME}
+)  
+
 install(
   DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
