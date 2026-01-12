@@ -13,7 +13,7 @@
 
 #include "s500_ros2_driver/msg/s500_profile6_t.hpp"
 #include "s500_ros2_driver/msg/s500_distance2.hpp"
-#include "std_msgs/msgs/header.hpp"
+#include "std_msgs/msg/header.hpp"
 #include "rcl_interfaces/msg/parameter_descriptor.cpp"
 #include "rcl_interfaces/msg/integer_range.cpp"
 #include "rcl_interfaces/msg/parameter_type.cpp"
