@@ -20,4 +20,4 @@ public:
 } // namespace utils
 } // namespace s500_ros2_driver
 
-#endif S500_ROS2_DRIVER_UTILS_LINK_PING_PARSER_HPP
+#endif // S500_ROS2_DRIVER_UTILS_LINK_PING_PARSER_HPP

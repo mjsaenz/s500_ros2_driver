@@ -30,6 +30,8 @@ ament_target_dependencies(
   rcl_interfaces
 )
 
+ament_export_dependencies(rosidl_default_runtime)
+
 install(TARGETS s500_node
   DESTINATION lib/${PROJECT_NAME})
   

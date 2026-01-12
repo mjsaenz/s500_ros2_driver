@@ -133,4 +133,4 @@ private:
 } // namespace utils
 } // namespace s500_ros2_driver
 
-#endif S500_ROS2_DRIVER_UTILS_LINK_DESKTOP_SERIAL_LINK_HPP
+#endif //S500_ROS2_DRIVER_UTILS_LINK_DESKTOP_SERIAL_LINK_HPP
