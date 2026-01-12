@@ -29,7 +29,7 @@ public:
      *  @param port: The device io handle
      */
     PingDevice(s500_ros2_driver::utils::link::PingPort& port)
-        : _parser(4096)
+        : _parser(8192)
         , _port(port)
     {
     }

@@ -109,9 +109,9 @@ class S500PublisherNode : public rclcpp::Node
       this->declare_parameter("gain_index", -1, gain_index_descriptor);
       
       rcl_interfaces::msg::IntegerRange ping_interval_ms_range;
-      gain_index_range.from_value = -1;
-      gain_index_range.to_value = std::numeric_limits<int16_t>::max();
-      gain_index_range.step = 1;
+      ping_interval_ms_range.from_value = -1;
+      ping_interval_ms_range.to_value = std::numeric_limits<int16_t>::max();
+      ping_interval_ms_range.step = 1;
       
       auto ping_interval_ms_descriptor = rcl_interfaces::msg::ParameterDescriptor();
       ping_interval_ms_descriptor.description = "Minimum interval between ping, in ms. Set to -1 to start a single ping.";
@@ -162,9 +162,9 @@ class S500PublisherNode : public rclcpp::Node
       
       // speed of sound: on_parameter_event callback function allows dynamically changing the speed of sound through ROS parameter
       rcl_interfaces::msg::IntegerRange sos_mm_per_sec_range;
-      length_mm_range.from_value = std::numeric_limits<uint32_t>::min();
-      length_mm_range.to_value = std::numeric_limits<uint32_t>::max(); 
-      length_mm_range.step = 1;
+      sos_mm_per_sec_range.from_value = std::numeric_limits<uint32_t>::min();
+      sos_mm_per_sec_range.to_value = std::numeric_limits<uint32_t>::max(); 
+      sos_mm_per_sec_range.step = 1;
       
       auto sos_mm_per_sec_description = rcl_interfaces::msg::ParameterDescriptor();
       sos_mm_per_sec_description.description = "Speed of sound in the sounding medium, in mm/s. Used in distance calculations.";

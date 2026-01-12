@@ -40,9 +40,6 @@ std::shared_ptr<AbstractLink> AbstractLink::openUrl(const std::string& url)
         return {};
     }
 
-#if __cplusplus >= 201703L
-#warning "Move match strings to string_view and concatenate it with regex string inside the named regex match"
-#endif
     urlStruct.type = match["type"].str();
     urlStruct.host = match["host"].str();
     urlStruct.config = match["config"].str();

@@ -49,19 +49,14 @@ install(
   DESTINATION include
 )
 
-install(
-  DIRECTORY rosidl_generator_cpp/${PROJECT_NAME}
-  DESTINATION include/${PROJECT_NAME}
-)
-
 install(TARGETS s500_publisher_node
   DESTINATION lib/${PROJECT_NAME}
 )  
 
-install(
-  DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
-)
+#install(
+#  DIRECTORY launch
+#  DESTINATION share/${PROJECT_NAME}
+#)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
