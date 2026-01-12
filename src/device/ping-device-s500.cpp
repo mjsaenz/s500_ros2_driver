@@ -1,6 +1,7 @@
 #include "s500_ros2_driver/device/ping-device-s500.hpp"
 #include "s500_ros2_driver/message/ping-message-common.hpp"
 #include "s500_ros2_driver/message/ping-message-s500.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 namespace s500_ros2_driver {
 namespace device {
@@ -94,15 +95,26 @@ void S500::_handleMessage(const s500_ros2_driver::message::ping_message* message
                 }
                 profile6_t_data.pwr_results = new uint16_t[message_profile6_t->pwr_results_length()];
             }
+            
+            RCLCPP_INFO(rclcpp::get_logger("s500_device"), "PROFILE6_T received. Parsed num_results: %d, Parsed pwr_results_length: %d",
+                message_profile6_t->num_results(),
+                message_profile6_t->pwr_results_length());
+
 
             // If pointer is invalid, make sure to abort, there is no more memory!
             if (profile6_t_data.pwr_results == nullptr) {
                 profile6_t_data.pwr_results_length = -1;
+                RCLCPP_WARN(rclcpp::get_logger("s500_device"), "No memory allocated for profile6_t_data.pwr_results");
                 return;
             }
 
             profile6_t_data.pwr_results_length = message_profile6_t->pwr_results_length();
-            memcpy(profile6_t_data.pwr_results, message_profile6_t->pwr_results(), message_profile6_t->pwr_results_length());
+            if (message_profile6_t->pwr_results() && message_profile6_t->pwr_results_length() > 0) {
+                memcpy(profile6_t_data.pwr_results, 
+                       message_profile6_t->pwr_results(), 
+                       message_profile6_t->pwr_results_length() * sizeof(uint16_t));
+            }
+
         }
         break;
         case s500_ros2_driver::message::S500Id::RANGE:

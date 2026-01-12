@@ -14,7 +14,7 @@ UdpLink::UdpLink(const std::string& host, const std::string& port)
     : AbstractLink()
     , _context()
     , _socket(_context.eventLoop)
-    , _rxBuffer(4096)
+    , _rxBuffer(8192)
 {
     using namespace boost;
 

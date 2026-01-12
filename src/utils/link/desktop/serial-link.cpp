@@ -17,7 +17,7 @@ SerialLink::SerialLink(const std::string& port, uint32_t baudrate)
     : AbstractLink()
     , _context()
     , _serialPort(_context.eventLoop)
-    , _rxBuffer(4096)
+    , _rxBuffer(8192)
 {
     using namespace boost;
 
