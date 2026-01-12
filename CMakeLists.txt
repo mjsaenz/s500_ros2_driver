@@ -18,7 +18,15 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   DEPENDENCIES std_msgs
 )
 
-add_executable(s500_publisher_node src/s500_node.cpp)
+add_executable(s500_publisher_node 
+  src/s500_node.cpp
+  src/device/ping-device-s500.cpp
+  src/device/ping-device.cpp
+  src/utils/link/desktop/abstract-link.cpp
+  src/utils/link/desktop/serial-link.cpp
+  src/utils/link/desktop/udp-link.cpp
+  src/utils/time/ping-time.cpp
+)
 
 ament_target_dependencies(s500_publisher_node
   rclcpp

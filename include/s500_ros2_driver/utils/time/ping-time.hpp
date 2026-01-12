@@ -21,4 +21,4 @@ void yield();
 } // namespace utils
 } // namespace s500_ros2_driver
 
-#endif S500_ROS2_DRIVER_UTILS_TIME_PING_TIME_HPP
+#endif // S500_ROS2_DRIVER_UTILS_TIME_PING_TIME_HPP
