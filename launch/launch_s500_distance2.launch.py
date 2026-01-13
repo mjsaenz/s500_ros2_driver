@@ -21,7 +21,7 @@ def generate_launch_description():
                 'start_mm': 0,
                 'length_mm': 20000,
                 'gain_index': -1,
-                'ping_interval_ms': 100, # 10hz, 25hz is upper limit
+                'ping_interval_ms': 100, # 10hz, 25hz is upper limit reported by ros2 topic hz, but manual timing suggests true upper limit could be higher
                 'packet_type': 'distance2',
                 'chirp_enable': True,
                 'decimation': 0,

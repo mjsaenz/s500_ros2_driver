@@ -488,7 +488,10 @@ uint16_t pwr_results_length
          return reinterpret_cast<uint16_t*>(msgData+headerLength+66); 
     }
     void set_pwr_results_at(const uint16_t i, const uint16_t data) { 
-        if ((i * sizeof(uint16_t)) < (payload_length() - 66)) {
+    	if(payload_length()<=66) {
+          return;  
+         }
+        if ((i * sizeof(uint16_t)) < static_cast<size_t>(payload_length() - 66)) {
              pwr_results()[i] = data;
          }
  

@@ -275,6 +275,8 @@ class S500PublisherNode : public rclcpp::Node
     {
       while (this->sonar_polling_thread_execute_ && rclcpp::ok()){
         
+        rcl_time_point_value_t last_message_ts_msec = this->get_clock()->now().nanoseconds()/1e6;
+        
         auto msg = this->device_->waitMessage(report_id_, msec_per_ping_); // blocking
         
         if (!this->sonar_polling_thread_execute_){
@@ -283,13 +285,14 @@ class S500PublisherNode : public rclcpp::Node
         
         if (msg) {
           
-          RCLCPP_INFO(this->get_logger(), "Got a %s message.", packet_type_.c_str());
+          auto message_ts = this->get_clock()->now();
+          last_message_ts_msec = message_ts.nanoseconds()/1000000;
           
           if (this->report_id_ == s500_ros2_driver::message::S500Id::DISTANCE2){
             auto& data = this->device_->distance2_data;
             auto distance2_msg = std::make_unique<s500_ros2_driver::msg::S500Distance2>();
             
-            distance2_msg->header.stamp = this->get_clock()->now();
+            distance2_msg->header.stamp = message_ts;
             distance2_msg->header.frame_id = this->frame_id_;
             
             distance2_msg->ping_distance_mm = data.ping_distance_mm;
@@ -303,7 +306,7 @@ class S500PublisherNode : public rclcpp::Node
             auto& data = this->device_->profile6_t_data;
             auto profile6_t_msg = std::make_unique<s500_ros2_driver::msg::S500Profile6T>();
             
-            profile6_t_msg->header.stamp = this->get_clock()->now();
+            profile6_t_msg->header.stamp = message_ts;
             profile6_t_msg->header.frame_id = this->frame_id_;
             
             profile6_t_msg->start_mm = data.start_mm;
@@ -331,7 +334,11 @@ class S500PublisherNode : public rclcpp::Node
             this->profile6_t_publisher_->publish(std::move(profile6_t_msg));
           }
         } else {
-          RCLCPP_WARN(this->get_logger(), "Did not receive a %s message within the %d ms timeout.", packet_type_.c_str(), msec_per_ping_);
+          rcl_time_point_value_t time_since_last_message_msec = this->get_clock()->now().nanoseconds()/1000000 - last_message_ts_msec;
+          if ( time_since_last_message_msec > static_cast<rcl_time_point_value_t>(msec_per_ping_)){
+            // only warn if message was fully missed, not concerned with few ms variations in message time
+            RCLCPP_WARN(this->get_logger(), "%ld ms since last %s message received. Expected new message within %d ms.", time_since_last_message_msec, packet_type_.c_str(), msec_per_ping_);
+          }
         }
       }
       RCLCPP_INFO(this->get_logger(), "Sonar polling thread has ended.");
