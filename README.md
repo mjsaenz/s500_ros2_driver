@@ -2,7 +2,7 @@
 
 ## Overview
 
-This ROS2 package provides a C++ driver for the Cerulean Sonar S500 echosounder. The driver connects to the S500 device via UDP or a serial connection, allowing users to configure ping parameters and receive data.
+This ROS2 package provides a C++ driver for the Cerulean Sonar S500 echosounder. The driver connects to the S500 device via UDP or a serial connection using the [ping-cpp](https://github.com/bluerobotics/ping-cpp/tree/master) package, allowing users to configure ping parameters and receive data.
 
 The node can be configured to publish two types of messages from the S500's Ping-Protocol:
 *   `distance2`: A simple message containing the most recent and an averaged distance measurement.
