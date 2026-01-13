@@ -153,6 +153,4 @@ uint16[] pwr_results                     # Array of backscatter power results
 
 ## TODO
 
-*   Add a proper license declaration to `package.xml`.
-*   Update the package description in `package.xml`.
 *   Move launch parameter values to a YAML file to allow changing configuration without requiring rebuilding.

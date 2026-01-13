@@ -2,10 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>s500_ros2_driver</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <version>1.0.0</version>
+  <description>This ROS2 package provides a C++ driver for the Cerulean Sonar S500 echosounder, user configurable to publish either `distance2` or `profile6_t` messages from the S500's Ping-Protocol.</description>
   <maintainer email="matthewjamessaenz@gmail.com">frfusera</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   
