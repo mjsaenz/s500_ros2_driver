@@ -283,6 +283,8 @@ class S500PublisherNode : public rclcpp::Node
         
         if (msg) {
           
+          RCLCPP_INFO(this->get_logger(), "Got a %s message.", packet_type_.c_str());
+          
           if (this->report_id_ == s500_ros2_driver::message::S500Id::DISTANCE2){
             auto& data = this->device_->distance2_data;
             auto distance2_msg = std::make_unique<s500_ros2_driver::msg::S500Distance2>();
