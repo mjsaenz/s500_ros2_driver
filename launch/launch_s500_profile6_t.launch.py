@@ -14,8 +14,8 @@ def generate_launch_description():
                 'connection_type': 'udp', # uncomment 'udp_' or 'serial_' params as appropriate
                 'udp_ip': '192.168.0.20',
                 'udp_port': 51200,
-                # 'serial_port', '/dev/ttyUSB0',
-                # 'baud_rate', 115200,
+                # 'serial_port': '/dev/ttyUSB0',
+                # 'baud_rate': 115200,
                 
                 # device parameters, changes after launch will be ignored
                 'start_mm': 0,
