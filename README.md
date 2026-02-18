@@ -61,9 +61,9 @@ ros2 launch s500_ros2_driver launch_s500_profile6_t.launch.py
 
 ### Published Topics
 
-*   `/s500/distance2` ([s500_ros2_driver/msg/S500Distance2](msg/s500Distance2.msg))
+*   `/s500/distance2` ([s500_ros2_driver/msg/S500Distance2](msg/S500Distance2.msg))
     *   Published when the `packet_type` parameter is set to `'distance2'`.
-*   `/s500/profile6_t` ([s500_ros2_driver/msg/S500Profile6T](msg/s500Profile6T.msg))
+*   `/s500/profile6_t` ([s500_ros2_driver/msg/S500Profile6T](msg/S500Profile6T.msg))
     *   Published when the `packet_type` parameter is set to `'profile6_t'`.
 
 ### Parameters
