@@ -24,7 +24,7 @@ To build the package, place it in your ROS2 workspace's `src` directory and run 
 
 ```bash
 # In your workspace root
-cd <sonar_ws>/src
+cd <ros2_ws>/src
 git clone https://github.com/mjsaenz/s500_ros2_driver
 cd ../
 rosdep install --from-paths src --ignore-src
