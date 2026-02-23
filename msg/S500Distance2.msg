@@ -2,6 +2,7 @@
 # https://docs.bluerobotics.com/ping-protocol/pingmessage-s500/#1223-distance2
 
 std_msgs/Header header
+uint32 ping_id 0 # spoofing ping_id from profile6_t to create identifier for individual distance2 messages
 
 # default values zeroed out to signal when valid profile has not been received
 # fields presented in same order as official documentation

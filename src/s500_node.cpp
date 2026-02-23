@@ -294,6 +294,7 @@ class S500PublisherNode : public rclcpp::Node
             
             distance2_msg->header.stamp = message_ts;
             distance2_msg->header.frame_id = this->frame_id_;
+            distance2_msg->ping_id = this->distance2_ping_id_++;
             
             distance2_msg->ping_distance_mm = data.ping_distance_mm;
             distance2_msg->averaged_distance_mm = data.averaged_distance_mm;
@@ -384,8 +385,9 @@ class S500PublisherNode : public rclcpp::Node
     // dynamic parameter
     uint32_t sos_mm_per_sec_;
     
-    // metadata parameter
+    // metadata parameters
     std::string frame_id_;
+    uint32_t distance2_ping_id_{0};
 
     std::unique_ptr<s500_ros2_driver::device::S500> device_;
     std::shared_ptr<s500_ros2_driver::utils::link::PingPort> port_;
