@@ -221,7 +221,7 @@ class S500PublisherNode : public rclcpp::Node
       bool use_sim_time = this->get_parameter_or("use_sim_time", false);
       if (use_sim_time){
         RCLCPP_INFO(this->get_logger(), "Using sim time.");
-        while (rclcpp::ok() && this->get_clock()->now().nanoseconds() == 0){ {
+        while (rclcpp::ok() && this->get_clock()->now().nanoseconds() == 0) {
           RCLCPP_INFO(this->get_logger(), "Waiting for sim time (/clock)...");
           rclcpp::spin_some(this->get_node_base_interface());
           rclcpp::sleep_for(std::chrono::milliseconds(100));
