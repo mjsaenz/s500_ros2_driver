@@ -184,32 +184,11 @@ class S500PublisherNode : public rclcpp::Node
       
       this->frame_id_ = this->get_parameter("frame_id").as_string();
       
-      if (!init_device()){
-        RCLCPP_FATAL(this->get_logger(), "Failed to initialize device. Node will be shut down.");
-        rclcpp::shutdown();
-        return;
-      }
-
-      bool use_sim_time = false;
-      this->get_parameter("use_sim_time", use_sim_time);
-      if (use_sim_time){
-        RCLCPP_INFO(this->get_logger(), "Using sim time.");
-        while (rclcpp::ok() && !this->get_clock()->ros_time_is_active()) {
-          RCLCPP_INFO(this->get_logger(), "Waiting for sim time (/clock) to become active...");
-          rclcpp::sleep_for(std::chrono::milliseconds(100));
-        }
-      } else {
-        RCLCPP_INFO(this->get_logger(), "Using system time.");
-      }
-      
       if (report_id_ == s500_ros2_driver::message::S500Id::DISTANCE2){
         this->distance2_publisher_ = this->create_publisher<s500_ros2_driver::msg::S500Distance2>("s500/distance2", 10);
       } else { // report_id_ == s500_ros2_driver::message::S500Id::PROFILE6_T
         this->profile6_t_publisher_ = this->create_publisher<s500_ros2_driver::msg::S500Profile6T>("s500/profile6_t", 10);
       }
-      
-      RCLCPP_INFO(this->get_logger(), "Starting a dedicated sonar polling thread.");
-      this->sonar_polling_thread_ = std::thread(&S500PublisherNode::sonar_poll_loop, this);
       
       rclcpp::on_shutdown(std::bind(&S500PublisherNode::on_shutdown_callback, this));
       
@@ -227,6 +206,32 @@ class S500PublisherNode : public rclcpp::Node
       };
       
       this->sos_handler_ = this->param_subscriber_->add_parameter_callback("sos_mm_per_sec", sos_cb);
+    }
+    /**
+     *  @brief Function to initialize connection to sonar device, wait for sim_time to become active if use_sim_time is true, and start sonar_poll_loop() in a separate thread. Returns true if all of these steps are successful, otherwise returns false with a ROS2 error message explaining where it failed.
+     */
+    bool start()
+    {
+      if (!init_device()){
+        RCLCPP_FATAL(this->get_logger(), "Failed to initialize device.");
+        return false;
+      }
+
+      // Read sim_time here (ROS has now fully loaded parameter overrides)
+      bool use_sim_time = this->get_parameter_or("use_sim_time", false);
+      if (use_sim_time){
+        RCLCPP_INFO(this->get_logger(), "Using sim time.");
+        while (rclcpp::ok() && !this->get_clock()->ros_time_is_active()) {
+          RCLCPP_INFO(this->get_logger(), "Waiting for sim time (/clock)...");
+          rclcpp::sleep_for(std::chrono::milliseconds(100));
+        }
+      } else {
+        RCLCPP_INFO(this->get_logger(), "Using system time.");
+      }
+
+      RCLCPP_INFO(this->get_logger(), "Starting a dedicated sonar polling thread.");
+      this->sonar_polling_thread_ = std::thread(&S500PublisherNode::sonar_poll_loop, this);
+      return true;
     }
   private:
     /**
@@ -418,6 +423,13 @@ int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<S500PublisherNode>();
+  if (node->start()){
+    RCLCPP_INFO(node->get_logger(), "S500 ROS2 driver node started successfully.");
+  } else {
+    RCLCPP_FATAL(node->get_logger(), "S500 ROS2 driver node failed to start. Exiting.");
+    rclcpp::shutdown();
+    return 1;
+  }
   rclcpp::spin(node);
   rclcpp::shutdown(); 
   return 0;
