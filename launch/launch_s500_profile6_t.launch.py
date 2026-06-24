@@ -4,6 +4,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 def generate_launch_description():
+    use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',
@@ -17,6 +18,7 @@ def generate_launch_description():
             output='screen',
             respawn=True,
             parameters=[{
+                'use_sim_time': use_sim_time,
                 # connection parameters, changes after launch will be ignored
                 'connection_type': 'udp', # uncomment 'udp_' or 'serial_' params as appropriate
                 'udp_ip': '192.168.0.20',
