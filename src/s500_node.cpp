@@ -23,7 +23,7 @@ using namespace std::chrono_literals;
 class S500PublisherNode : public rclcpp::Node
 {
   public:
-    S500PublisherNode() : Node("s500_publisher_node")
+    S500PublisherNode(const rclcpp::NodeOptions & options = rclcpp::NodeOptions()) : Node("s500_publisher_node", options)
     {
       // connection parameters: we set these once on initialization and do not change
       auto connection_type_descriptor = rcl_interfaces::msg::ParameterDescriptor();
