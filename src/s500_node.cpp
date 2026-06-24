@@ -223,6 +223,7 @@ class S500PublisherNode : public rclcpp::Node
         RCLCPP_INFO(this->get_logger(), "Using sim time.");
         while (rclcpp::ok() && !this->get_clock()->ros_time_is_active()) {
           RCLCPP_INFO(this->get_logger(), "Waiting for sim time (/clock)...");
+          rclcpp::spin_some(this->get_node_base_interface());
           rclcpp::sleep_for(std::chrono::milliseconds(100));
         }
       } else {
