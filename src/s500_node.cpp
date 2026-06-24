@@ -189,6 +189,18 @@ class S500PublisherNode : public rclcpp::Node
         rclcpp::shutdown();
         return;
       }
+
+      bool use_sim_time = false;
+      this->get_parameter("use_sim_time", use_sim_time);
+      if (use_sim_time){
+        RCLCPP_INFO(this->get_logger(), "Using sim time.");
+        while (rclcpp::ok() && !this->get_clock()->ros_time_is_active()) {
+          RCLCPP_INFO(this->get_logger(), "Waiting for sim time (/clock) to become active...");
+          rclcpp::sleep_for(std::chrono::milliseconds(100));
+        }
+      } else {
+        RCLCPP_INFO(this->get_logger(), "Using system time.");
+      }
       
       if (report_id_ == s500_ros2_driver::message::S500Id::DISTANCE2){
         this->distance2_publisher_ = this->create_publisher<s500_ros2_driver::msg::S500Distance2>("s500/distance2", 10);
