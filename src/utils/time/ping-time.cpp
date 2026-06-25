@@ -22,7 +22,12 @@ void PingTime::microsecondDelay(unsigned int microseconds)
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
 }
 
-void PingTime::yield() { std::this_thread::yield(); }
+void PingTime::yield()
+{
+    // Avoid busy-spinning, especially under host load or when ROS sim time is active.
+    // A short sleep gives other threads enough time to process I/O and callbacks.
+    std::this_thread::sleep_for(std::chrono::microseconds(100));
+}
 
 } // namespace time
 } // namespace utils

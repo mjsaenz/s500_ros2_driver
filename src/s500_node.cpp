@@ -224,7 +224,7 @@ class S500PublisherNode : public rclcpp::Node
         while (rclcpp::ok() && this->get_clock()->now().nanoseconds() == 0) {
           RCLCPP_INFO(this->get_logger(), "Waiting for sim time (/clock)...");
           rclcpp::spin_some(this->get_node_base_interface());
-          rclcpp::sleep_for(std::chrono::milliseconds(100));
+          std::this_thread::sleep_for(100ms);
         }
       } else {
         RCLCPP_INFO(this->get_logger(), "Using system time.");
@@ -355,7 +355,8 @@ class S500PublisherNode : public rclcpp::Node
           }
         } else {
           rcl_time_point_value_t time_since_last_message_msec = this->get_clock()->now().nanoseconds()/1000000 - last_message_ts_msec;
-          if ( time_since_last_message_msec > static_cast<rcl_time_point_value_t>(msec_per_ping_)){
+          bool use_sim_time = this->get_parameter_or("use_sim_time", false);
+          if ( !use_sim_time && (time_since_last_message_msec > static_cast<rcl_time_point_value_t>(msec_per_ping_))){
             // only warn if message was fully missed, not concerned with few ms variations in message time
             RCLCPP_WARN(this->get_logger(), "%ld ms since last %s message received. Expected new message within %d ms.", time_since_last_message_msec, packet_type_.c_str(), msec_per_ping_);
           }
