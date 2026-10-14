@@ -5,11 +5,41 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
+    connection_type = LaunchConfiguration('connection_type', default='udp')
+    udp_ip = LaunchConfiguration('udp_ip', default='192.168.0.20')
+    udp_port = LaunchConfiguration('udp_port', default='51200')
+    serial_port = LaunchConfiguration('serial_port', default='/dev/ttyUSB0')
+    baud_rate = LaunchConfiguration('baud_rate', default='115200')
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',
             default_value='false',
             description='Use simulation clock if true'
+        ),
+        DeclareLaunchArgument(
+            'connection_type',
+            default_value='udp',
+            description='Connection type to use. Valid parameters are "udp" or "serial".'
+        ),
+        DeclareLaunchArgument(
+            'udp_ip',
+            default_value='192.168.0.20',
+            description='IP of S500 PCB. Ignored if connection_type parameter value is "serial".'
+        ),
+        DeclareLaunchArgument(
+            'udp_port',
+            default_value='51200',
+            description='UDP port of S500 PCB. Ignored if connection_type parameter value is "serial".'
+        ),
+        DeclareLaunchArgument(
+            'serial_port',
+            default_value='/dev/ttyUSB0',
+            description='Serial port of S500 PCB. Ignored if connection_type parameter value is "udp".'
+        ),
+        DeclareLaunchArgument(
+            'baud_rate',
+            default_value='115200',
+            description='Baud rate of serial connection to S500 PCB. Ignored if connection_type parameter value is "udp".'
         ),
         Node(
             package='s500_ros2_driver',
@@ -20,11 +50,11 @@ def generate_launch_description():
             parameters=[{
                 'use_sim_time': use_sim_time,
                 # connection parameters, changes after launch will be ignored
-                'connection_type': 'udp', # uncomment 'udp_' or 'serial_' params as appropriate
-                'udp_ip': '192.168.0.20',
-                'udp_port': 51200,
-                # 'serial_port': '/dev/ttyUSB0',
-                # 'baud_rate': 115200,
+                'connection_type': connection_type,
+                'udp_ip': udp_ip,
+                'udp_port': udp_port,
+                'serial_port': serial_port,
+                'baud_rate': baud_rate,
                 
                 # device parameters, changes after launch will be ignored
                 'start_mm': 0,
