@@ -184,9 +184,10 @@ class S500PublisherNode : public rclcpp::Node
       
       this->frame_id_ = this->get_parameter("frame_id").as_string();
       
-      if (report_id_ == s500_ros2_driver::message::S500Id::DISTANCE2){
+      // report_id_ is not set until init_device(), so select the publisher from packet_type_
+      if (this->packet_type_ == "distance2"){
         this->distance2_publisher_ = this->create_publisher<s500_ros2_driver::msg::S500Distance2>("s500/distance2", 10);
-      } else { // report_id_ == s500_ros2_driver::message::S500Id::PROFILE6_T
+      } else {
         this->profile6_t_publisher_ = this->create_publisher<s500_ros2_driver::msg::S500Profile6T>("s500/profile6_t", 10);
       }
       
@@ -235,11 +236,84 @@ class S500PublisherNode : public rclcpp::Node
       return true;
     }
   private:
+    bool validate_device_params()
+    {
+      // connection type check
+      if (this->connection_type_ != "udp" && this->connection_type_ != "serial") {
+        RCLCPP_ERROR(this->get_logger(), "Connection type %s not recognized. Valid connection types are 'udp' and 'serial'.", this->connection_type_.c_str());
+        return false;
+      }
+
+      // packet type check
+      if (this->packet_type_ != "distance2" && this->packet_type_ != "profile6_t") {
+        RCLCPP_ERROR(this->get_logger(), "Packet type %s not recognized.", packet_type_.c_str());
+        return false;
+      }
+
+      // device range check
+      auto device_range_mm = this->start_mm_ + this->length_mm_;
+      if (device_range_mm > 142000) {
+        RCLCPP_WARN(this->get_logger(), "Device range exceeds maximum allowed value of 142000 mm. Clamping to maximum allowed value.");
+        this->length_mm_ = 142000 - this->start_mm_;
+        device_range_mm = this->start_mm_ + this->length_mm_;
+      }
+
+      // ping interval checks
+      if (this->msec_per_ping_ < 100) {
+        RCLCPP_WARN(this->get_logger(), "Ping interval is shorter than 100 ms (S500 operational limit). Clamping to 100 ms.");
+        this->msec_per_ping_ = 100;
+      }
+
+      auto round_trip_time_ms = 2 * device_range_mm / (this->sos_mm_per_sec_ / 1000);
+      auto dsp_processing_time_ms = 50; // approximate value
+
+      if (this->connection_type_ == "udp") {
+        // UDP bandwidth (100 MB/s) capable of handling packet size, so only time of flight and device limitations are considered.
+        if (this->msec_per_ping_ < static_cast<int16_t>(round_trip_time_ms + dsp_processing_time_ms)) {
+          RCLCPP_WARN(this->get_logger(), "Ping interval is shorter than round trip time plus DSP processing time (%d ms). Increasing to match.", static_cast<int>(round_trip_time_ms + dsp_processing_time_ms));
+          this->msec_per_ping_ = 10*(static_cast<int16_t>(round_trip_time_ms + dsp_processing_time_ms)/10); // round to nearest 10 ms
+        }
+      } else if (this->connection_type_ == "serial") {
+        // Serial connection has lower bandwidth compared to UDP, so ping interval must account for time of flight, DSP processing time and serial transmission time.
+        auto data_rate_Bps = this->baud_rate_ / 10; // convert baud rate to bytes per second, serial connection uses 8N1 so frame size is 10 bits per byte
+        if (this->packet_type_ == "distance2"){
+          auto payload_size_bytes = 4+4+2+1+1+4; // distance_2 packet size (u32, u32, u16, u8, u8, u32)
+          auto packet_size_bytes = 8 + payload_size_bytes + 2; // 8 header bytes, 2 checksum bytes
+          auto serial_transmission_time_ms = static_cast<int>(packet_size_bytes) / data_rate_Bps * 1000;
+          if (this->msec_per_ping_ < static_cast<int16_t>(round_trip_time_ms + dsp_processing_time_ms + serial_transmission_time_ms)) {
+            RCLCPP_WARN(this->get_logger(), "Ping interval is shorter than round trip time plus DSP processing time plus serial transmission time (%d ms). Increasing to match.", static_cast<int>(round_trip_time_ms + dsp_processing_time_ms + serial_transmission_time_ms));
+            this->msec_per_ping_ = 10*(static_cast<int16_t>(round_trip_time_ms + dsp_processing_time_ms + serial_transmission_time_ms)/10); // round to nearest 10 ms
+        }
+        } else if (this->packet_type_ == "profile6_t"){
+          // using minimum ping interval buckets from sensor_acquisitions/MARG_collect_s500.py, as assuming worst case profile size for serial transmission time calculation is too pessimistic
+          // function to determine profile6_t packet size depends on profile width and decimation factor, but exact function is unknown and decimation factor can dynamically change
+          if (device_range_mm <= 2000) {
+            this->msec_per_ping_ = 100; // minimum ping interval for device range <= 2000 mm
+          } else if (device_range_mm <= 15000) {
+            this->msec_per_ping_ = 200; // minimum ping interval for device range <= 15000 mm
+          } else if (device_range_mm <= 50000) {
+            this->msec_per_ping_ = 300; // minimum ping interval for device range <= 50000 mm
+          } else if (device_range_mm <= 75000) {
+            this->msec_per_ping_ = 400; // minimum ping interval for device range <= 75000 mm
+          } else if (device_range_mm <= 100000) {
+            this->msec_per_ping_ = 500; // minimum ping interval for device range <= 100000 mm
+          } else {
+            this->msec_per_ping_ = 800; // minimum ping interval for device range > 100000 mm
+          }
+          RCLCPP_INFO(this->get_logger(), "Setting ping interval to %d ms for device range %d mm.", this->msec_per_ping_, device_range_mm);
+        }
+      }
+      return true;
+    }
     /**
      *  @brief Function to initialize connection to sonar device. Returns true if able to parse the connection string, open that connection, intitialize comms with the sounder, and set Speed of Sound and other ping params. Otherwise returns false with a ROS2 error message explaining where it failed.
      */
     bool init_device()
     {
+      if (!validate_device_params()) {
+        return false;
+      }
+      
       // device connection and initialization
       if (this->connection_type_ == "udp"){
         this->connection_string_ = "udp:" + this->udp_ip_ + ":" + std::to_string(this->udp_port_);
